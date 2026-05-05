@@ -13,45 +13,79 @@ interface Question {
   correct_ans: string;
 }
 
-interface QuizPageProps {
-  questions: Question[];
+interface HistoryData {
+  question: string;
+  user_ans: string | null;
+  correct_ans: string;
+  correct: boolean;
 }
 
-function QuizPage({ questions }: QuizPageProps) {
+interface QuizPageProps {
+  questions: Question[];
+  score: number;
+  history: HistoryData[];
+  onRestart: () => void;
+  setScore: React.Dispatch<React.SetStateAction<number>>;
+  setHistory: React.Dispatch<React.SetStateAction<HistoryData[]>>;
+}
+
+function QuizPage({
+  questions,
+  score,
+  history,
+  onRestart,
+  setScore,
+  setHistory,
+}: QuizPageProps) {
   const [loading, setLoading] = useState(false);
   const [timer, setTimer] = useState<number>(TIMER);
   const [index, setIndex] = useState<number>(0);
-  const [currQuestion, setCurrQuestion] = useState<Question | null>(null);
   const [options, setOptions] = useState<string[]>([]);
   const [result, setResult] = useState(false);
 
   const intervalRef = useRef<number>(0);
   const controlRef = useRef<boolean>(false);
 
+  const currQuestion = questions[index];
+
   useEffect(() => {
     const all = shuffle([...questions[index].options]);
     setOptions(all);
-    setCurrQuestion(questions[index]);
     controlRef.current = false;
     setTimer(TIMER);
   }, [index]);
-
-  const onFinish = useCallback(() => {}, []);
 
   const goNext = useCallback(
     (userAnswer: string | null) => {
       if (controlRef.current) return;
       controlRef.current = true;
+      if (intervalRef.current) clearInterval(intervalRef.current);
+
+      const isCorrect = userAnswer === currQuestion?.correct_ans;
+      if (isCorrect) {
+        setScore((p) => p + 1);
+      }
+      const record: HistoryData = {
+        question: currQuestion.question,
+        user_ans: userAnswer,
+        correct_ans: currQuestion.correct_ans,
+        correct: isCorrect,
+      };
+
+      setHistory((h) => {
+        const updated = [...h, record];
+        return updated;
+      });
+
       setTimeout(() => {
         if (index + 1 >= questions.length) {
           setResult(true);
-          onFinish();
         } else {
           setIndex((i) => i + 1);
         }
       }, 500);
     },
-    [index, questions.length],
+    [index, questions.length, currQuestion],
   );
 
   useEffect(() => {
@@ -83,7 +117,7 @@ function QuizPage({ questions }: QuizPageProps) {
   if (result) {
     return (
       <>
-        <Result />
+        <Result score={score} summary={history} onRestart={onRestart} />
       </>
     );
   }
@@ -107,7 +141,12 @@ function QuizPage({ questions }: QuizPageProps) {
             {options.map((p, index) => {
               return (
                 <div className="my-2 mx-5" key={index}>
-                  <button className="shadow flex gap-10 px-5 py-2 bg-blue-400 w-fit rounded-lg cursor-pointer hover:bg-blue-500 transition-all duration-300 hover:shadow-lg">
+                  <button
+                    className="shadow flex gap-10 px-5 py-2 bg-blue-400 w-fit rounded-lg cursor-pointer hover:bg-blue-500 transition-all duration-300 hover:shadow-lg"
+                    onClick={() => {
+                      goNext(p);
+                    }}
+                  >
                     <span>{["A", "B", "C", "D"][index]}</span>
                     {p}
                   </button>

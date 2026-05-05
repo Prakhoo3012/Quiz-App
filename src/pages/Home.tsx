@@ -8,11 +8,29 @@ interface Question {
   correct_ans: string;
 }
 
+interface HistoryData {
+  question: string;
+  user_ans: string | null;
+  correct_ans: string;
+  correct: boolean;
+}
+
 function Home() {
   const [start, setStart] = useState<boolean>(false);
   const [count, setCount] = useState(2);
   const [questions, setQuestions] = useState<Question[]>([]);
+  const [score, setScore] = useState<number>(0);
+  const [history, setHistory] = useState<HistoryData[]>([]);
+
   const intervalRef = useRef(0);
+
+  const handleRestart = () => {
+    setStart(false); // go back to start button
+    setCount(2); // reset countdown
+    setQuestions([]); // clear questions
+    setHistory([]);
+    setScore(0);
+  };
 
   const startInterval = useCallback(() => {
     intervalRef.current = setInterval(() => {
@@ -33,7 +51,7 @@ function Home() {
 
   return (
     <>
-      <div className="bg-yellow-100 flex items-center justify-center h-screen">
+      <div className="bg-blue-200 flex items-center justify-center h-screen">
         {count ? (
           <>
             <div className="flex flex-wrap flex-col items-center justify-around gap-2 shadow rounded-xl w-1/2 bg-white min-h-64 py-2">
@@ -56,7 +74,14 @@ function Home() {
           </>
         ) : (
           <>
-            <QuizPage questions={questions} />
+            <QuizPage
+              questions={questions}
+              score={score}
+              history={history}
+              onRestart={handleRestart}
+              setScore={setScore}
+              setHistory={setHistory}
+            />
           </>
         )}
       </div>
